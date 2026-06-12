@@ -26,4 +26,7 @@ find_package(pybind11 CONFIG QUIET)
 if(pybind11_FOUND)
     pybind11_add_module(sound_viz_py bindings/python_bindings.cpp)
     target_link_libraries(sound_viz_py PRIVATE sound_viz_engine)
+else()
+    message(WARNING "pybind11 not found - skipping sound_viz_py Python module. "
+                     "Pass -Dpybind11_DIR=$(frontend/.venv/bin/python -m pybind11 --cmakedir) to enable it.")
 endif()
