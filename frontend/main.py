@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "engine", "buil
 import sound_viz_py
 
 WINDOW_SIZE = 1024
+SPECTRUM_LEN = WINDOW_SIZE // 2 + 1
 CHUNK_FRAMES = 1024
 
 
@@ -26,10 +27,21 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
         self.engine = sound_viz_py.Engine(window_size=WINDOW_SIZE, sample_rate=sample_rate)
 
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setYRange(-1.0, 1.0)
-        self.curve = self.plot_widget.plot(np.zeros(WINDOW_SIZE))
-        self.setCentralWidget(self.plot_widget)
+        self.waveform_plot = pg.PlotWidget()
+        self.waveform_plot.setYRange(-1.0, 1.0)
+        self.curve = self.waveform_plot.plot(np.zeros(WINDOW_SIZE))
+
+        self.spectrum_plot = pg.PlotWidget()
+        self.spectrum_bars = pg.BarGraphItem(
+            x=np.arange(SPECTRUM_LEN), height=np.zeros(SPECTRUM_LEN), width=0.8
+        )
+        self.spectrum_plot.addItem(self.spectrum_bars)
+
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(container)
+        layout.addWidget(self.waveform_plot)
+        layout.addWidget(self.spectrum_plot)
+        self.setCentralWidget(container)
 
         interval_ms = int(1000 * CHUNK_FRAMES / sample_rate)
         self.timer = QtCore.QTimer()
@@ -49,17 +61,18 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
         frame = self.engine.get_latest_features()
         self.curve.setData(frame["waveform"])
+        self.spectrum_bars.setOpts(height=frame["spectrum"])
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sound visualizer - phase 1a waveform viewer")
+    parser = argparse.ArgumentParser(description="Sound visualizer - phase 1b spectrum viewer")
     parser.add_argument("wav_path", help="Path to a WAV file")
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
     window = WaveformWindow(args.wav_path)
-    window.setWindowTitle("Sound Visualizer - Waveform (Phase 1a)")
-    window.resize(800, 400)
+    window.setWindowTitle("Sound Visualizer - Waveform + Spectrum (Phase 1b)")
+    window.resize(800, 600)
     window.show()
     app.exec_()
 

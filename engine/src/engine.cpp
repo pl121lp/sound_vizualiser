@@ -1,5 +1,7 @@
 #include "sound_viz/engine.h"
 #include "ring_buffer.h"
+#include "window.h"
+#include "fft.h"
 
 #include <vector>
 
@@ -7,13 +9,21 @@ struct EngineImpl {
     EngineConfig config;
     sound_viz::RingBuffer ring_buffer;
     std::vector<float> waveform_out;
+    std::vector<float> hann_coeffs;
+    std::vector<float> windowed_buf;
+    std::vector<float> spectrum_out;
     uint64_t frame_counter = 0;
     uint32_t last_channels = 1;
 
     explicit EngineImpl(EngineConfig cfg)
         : config(cfg),
           ring_buffer(cfg.window_size),
-          waveform_out(cfg.window_size, 0.0f) {}
+          waveform_out(cfg.window_size, 0.0f),
+          hann_coeffs(cfg.window_size, 0.0f),
+          windowed_buf(cfg.window_size, 0.0f),
+          spectrum_out(cfg.window_size / 2 + 1, 0.0f) {
+        sound_viz::hann_window(hann_coeffs.data(), hann_coeffs.size());
+    }
 };
 
 extern "C" {
@@ -50,12 +60,19 @@ FeatureFrame get_latest_features(EngineHandle engine) {
     EngineImpl* impl = engine;
     impl->ring_buffer.copy_latest(impl->waveform_out.data());
 
+    sound_viz::apply_window(impl->waveform_out.data(), impl->hann_coeffs.data(),
+                             impl->windowed_buf.data(), impl->windowed_buf.size());
+    sound_viz::real_fft_magnitude(impl->windowed_buf.data(), impl->windowed_buf.size(),
+                                   impl->spectrum_out.data());
+
     FeatureFrame frame{};
     frame.frame_index = impl->frame_counter++;
     frame.sample_rate = impl->config.sample_rate;
     frame.channels = impl->last_channels;
     frame.waveform = impl->waveform_out.data();
     frame.waveform_len = static_cast<uint32_t>(impl->waveform_out.size());
+    frame.spectrum = impl->spectrum_out.data();
+    frame.spectrum_len = static_cast<uint32_t>(impl->spectrum_out.size());
     return frame;
 }
 

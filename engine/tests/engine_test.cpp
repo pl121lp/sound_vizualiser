@@ -22,8 +22,8 @@ int main() {
     assert(frame1.waveform[1] == 0.0f);
     assert(frame1.waveform[2] == 1.0f);
     assert(frame1.waveform[3] == 2.0f);
-    assert(frame1.spectrum == nullptr);
-    assert(frame1.spectrum_len == 0);
+    assert(frame1.spectrum != nullptr);
+    assert(frame1.spectrum_len == 3);
     assert(frame1.rms == 0.0f);
     assert(frame1.frame_index == 0);
 
@@ -36,6 +36,8 @@ int main() {
     assert(frame2.waveform[1] == 4.0f);
     assert(frame2.waveform[2] == 5.0f);
     assert(frame2.waveform[3] == 6.0f);
+    assert(frame2.spectrum != nullptr);
+    assert(frame2.spectrum_len == 3);
     assert(frame2.frame_index == 1);
 
     // Stereo chunk: mixed down to mono by averaging channels.
