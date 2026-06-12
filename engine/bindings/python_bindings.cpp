@@ -22,6 +22,9 @@ public:
 
     void push_samples(py::array_t<float, py::array::c_style | py::array::forcecast> samples,
                        uint32_t n_channels) {
+        if (n_channels == 0) {
+            throw py::value_error("n_channels must be greater than zero");
+        }
         auto buf = samples.request();
         uint32_t n_frames = static_cast<uint32_t>(buf.size) / n_channels;
         ::push_samples(handle_, static_cast<const float*>(buf.ptr), n_frames, n_channels);
