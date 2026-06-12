@@ -14,13 +14,13 @@ Target platform for initial development: **Linux**. The Analysis Engine itself m
 ## 2. Architecture
 
 ```
-┌─────────────────────────────┐      ┌──────────────────────────┐
-│   Analysis Engine (C++)      │      │  Visualization Frontend   │
-│   - portable C++17 library   │◄────►│  (Python + pyqtgraph)     │
-│   - ring buffer               │  C   │  - test harness (WAV)     │
-│   - windowing + FFT           │  API │  - render loop            │
-│   - feature extraction        │      │  - UI controls            │
-└─────────────────────────────┘      └──────────────────────────┘
+┌──────────────────────────────┐      ┌──────────────────────────┐
+│   Analysis Engine (C++)      │      │  Visualization Frontend  │
+│   - portable C++17 library   │◄────►│  (Python + pyqtgraph)    │
+│   - ring buffer              │  C   │  - test harness (WAV)    │
+│   - windowing + FFT          │  API │  - render loop           │
+│   - feature extraction       │      │  - UI controls           │
+└──────────────────────────────┘      └──────────────────────────┘
 ```
 
 - **Analysis Engine**: CMake-built C++ library with zero GUI/platform dependencies. Owns a ring buffer, applies windowing, runs FFT, computes features.
@@ -48,6 +48,7 @@ typedef struct {
     uint32_t waveform_len;
     float rms;
     float zero_crossing_rate;
+    float peak;                // max abs sample in window, for VU/peak meter (peak-hold logic lives in frontend)
 
     // Frequency-domain
     const float* spectrum;     // FFT magnitude bins
@@ -55,6 +56,7 @@ typedef struct {
     float band_energy_low;
     float band_energy_mid;
     float band_energy_high;
+    float spectral_centroid;   // weighted mean frequency of spectrum, for brightness-driven effects
 } FeatureFrame;
 ```
 
@@ -79,13 +81,15 @@ The engine owns the buffers behind `waveform`/`spectrum` pointers; they are vali
 
 BPM detection and stereo-specific analysis are **not** part of the v1 `FeatureFrame`. They will be added as additional optional fields or an extension struct in Phase 3, once the core loop is validated — this keeps the v1 contract minimal and avoids breaking changes later.
 
+The Phase 3 stereo extension will also need to expose **per-channel waveform snapshots** (not just the mixed/mono `waveform`), since the vectorscope/Lissajous view plots left-channel amplitude against right-channel amplitude sample-by-sample. Onset/beat detection (spectral-flux based) can be computed in the frontend from successive `spectrum`/`band_energy_*` values without any engine change; only if it proves too slow in Python would it move into the engine as an extension field.
+
 ## 4. What gets visualized
 
 Across the phases below, the system covers:
 
-- **Time-domain**: waveform, amplitude (e.g. color effects at threshold), RMS, zero-crossing rate (noisiness indicator)
-- **Frequency-domain**: magnitude spectrum (FFT bins), spectrogram (time + frequency), band energy (low/mid/high — simplified EQ-style view)
-- **Advanced**: BPM detection, stereo-specific characteristics (correlation/width)
+- **Time-domain**: waveform, amplitude (e.g. color effects at threshold), RMS, zero-crossing rate (noisiness indicator), peak/VU meter with peak-hold
+- **Frequency-domain**: magnitude spectrum (FFT bins) with peak-hold markers, spectrogram (time + frequency), band energy (low/mid/high — simplified EQ-style view), spectral centroid (brightness indicator)
+- **Advanced**: BPM detection (preceded by simpler spectral-flux onset/beat-flash), stereo-specific characteristics (correlation/width, vectorscope/Lissajous)
 - **Visualization styles**: scrolling vs. static window, vertical bars for frequency bins, color gradients, circular/radial layouts, particle systems for dynamic effects
 
 ## 5. Iterative development plan
@@ -94,21 +98,22 @@ Across the phases below, the system covers:
 
 - **1a. Plumbing skeleton**: ring buffer, `push_samples`/`get_latest_features`, C API + pybind11 binding, WAV file harness. Frontend renders **raw waveform only** — validates the end-to-end interface and data flow before any DSP is added.
 - **1b. Spectrum**: add Hann windowing + FFT (pocketfft or kissfft), populate `spectrum`/`spectrum_len`. Frontend adds the **spectrum bar plot**.
-- **1c. Scalar features**: add RMS, zero-crossing rate, band energy (low/mid/high), displayed as numeric readouts/bars. Add C++ unit tests (Catch2 or GoogleTest) validating DSP functions against known signals (e.g. pure sine wave → expected RMS and spectrum peak).
+- **1c. Scalar features**: add RMS, zero-crossing rate, peak amplitude, band energy (low/mid/high), and spectral centroid, displayed as numeric readouts/bars. Peak amplitude drives a VU/peak meter with peak-hold (hold/decay logic in the frontend). Add C++ unit tests (Catch2 or GoogleTest) validating DSP functions against known signals (e.g. pure sine wave → expected RMS, spectrum peak, and centroid).
 - **1d. Configurability**: expose analysis window size, update rate, FFT window type, and band split points via the config struct and harness CLI args.
 
 ### Phase 2 — Visualization breadth + interactivity
 
 - **2a. Spectrogram**: scrolling time-frequency view.
-- **2b. Radial/circular spectrum**: frequency bins mapped around a circle.
-- **2c. Color gradients / amplitude-threshold effects**.
+- **2b. Radial/circular spectrum**: frequency bins mapped around a circle. Both 2a and 2b add peak-hold markers (decaying max-value indicators per bin), tracked entirely in the frontend from successive `spectrum` frames — no engine change needed.
+- **2c. Color gradients / amplitude-threshold effects**, including a brightness-driven gradient using `spectral_centroid`.
 - **2d. UI controls**: update-rate slider, visualization-mode selector/buttons.
 - **2e. Live audio capture harness** (PortAudio or similar) as an alternative input source to WAV files.
+- **2f. Onset/beat-flash effect**: spectral-flux onset detection computed in the frontend from successive `spectrum`/`band_energy_*` values, driving a simple flash/pulse effect. Acts as a stepping stone toward full BPM detection in 3a.
 
 ### Phase 3 — Advanced analysis
 
-- **3a. BPM detection** — added via a new optional extension struct, without breaking the v1 `FeatureFrame`.
-- **3b. Stereo analysis** — channel correlation/width; requires multi-channel handling in the engine.
+- **3a. BPM detection** — full tempo tracking, added via a new optional extension struct, without breaking the v1 `FeatureFrame`. Builds on the onset/beat-flash work from 2f.
+- **3b. Stereo analysis** — channel correlation/width and vectorscope/Lissajous view; requires multi-channel handling in the engine, including per-channel waveform snapshots in the extension struct (see Deferred fields).
 - **3c. Particle-system effects** in the frontend.
 - **3d. Smoothing** — e.g. exponential moving average on spectrum bins/scalar features, for less jittery visuals.
 
