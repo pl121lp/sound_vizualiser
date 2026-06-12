@@ -1,12 +1,14 @@
-* Please work with me to improve this spec and iron out any issues or missing information before we build this system
-- determine what features to focus on first, iterative : simple (PoC) to more advanced
-- architecture and implementation details (with cross-platform considerations)
+
 
 # Sound Visualizer
 
-The system visualizes audio data in real-time using ... 
+The system visualizes audio data in real-time using suitable visualization framework 
 
-Consider a C++ processing engine but visualization using ?
+The visualizer should read and visualize a specified set of samples at a time.
+
+Consider a portable C++ engine that does the analysis but visualization using a more suitable frontend.
+The frontend can be something like python (or platform specific framework) initially.
+By decoupling backend from frontend its easier to change out frontend later, as long as the interface is clean. 
 
 ## Sub components
 
@@ -34,7 +36,7 @@ Considerations:
     - Circular / radial visualizers (eg. Map frequency bins around a circle)
     - particle systems (for dynamic effects)
 
-## Parameters
+## Potential configurable parameters
 
 - Window size (WxH)
 - Update rate (Hz)
@@ -61,4 +63,9 @@ Considerations:
     - Hann or Hamming
 
 - Smoothing
+
+
+## Iterative development plan
+
+TBD
 
