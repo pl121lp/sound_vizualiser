@@ -22,8 +22,8 @@ typedef struct {
     float peak;                // 0 in 1a (added in 1c)
 
     // Frequency-domain
-    const float* spectrum;     // nullptr in 1a (added in 1b)
-    uint32_t spectrum_len;     // 0 in 1a
+    const float* spectrum;     // populated in 1b: N/2+1 magnitude bins
+    uint32_t spectrum_len;     // == window_size/2 + 1
     float band_energy_low;     // 0 in 1a (added in 1c)
     float band_energy_mid;     // 0 in 1a (added in 1c)
     float band_energy_high;    // 0 in 1a (added in 1c)
