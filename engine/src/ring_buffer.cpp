@@ -1,8 +1,12 @@
 #include "ring_buffer.h"
 
+#include <cassert>
+
 namespace sound_viz {
 
-RingBuffer::RingBuffer(size_t capacity) : buffer_(capacity, 0.0f) {}
+RingBuffer::RingBuffer(size_t capacity) : buffer_(capacity, 0.0f) {
+    assert(capacity > 0 && "RingBuffer capacity must be greater than zero");
+}
 
 void RingBuffer::push(const float* samples, size_t count) {
     size_t capacity = buffer_.size();
