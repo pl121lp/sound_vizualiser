@@ -26,6 +26,10 @@ void push_samples(EngineHandle engine, const float* samples, uint32_t n_frames, 
     EngineImpl* impl = engine;
     impl->last_channels = n_channels;
 
+    if (n_channels == 0) {
+        return;
+    }
+
     if (n_channels == 1) {
         impl->ring_buffer.push(samples, n_frames);
         return;
