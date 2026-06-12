@@ -1,0 +1,5 @@
+engine/build/
+frontend/.venv/
+frontend/fixtures/
+__pycache__/
+*.pyc
