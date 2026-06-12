@@ -4,9 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository is in the planning/specification stage. There is currently no source code, build system, or test suite — only `project_spec_draft.md`, a working draft of the system specification.
+Implementation is underway per `project_spec_final.md`. The repo has two main parts:
 
-The immediate task requested for this repo is to collaborate on refining `project_spec_draft.md` into a finalized `project_spec_final.md` (determining feature scope/iteration order and cross-platform architecture details), not to write implementation code, unless the user has since moved past this stage.
+- `engine/`: C++ analysis engine (CMake build, pybind11 bindings, unit tests via ctest).
+- `frontend/`: Python visualization layer that consumes the engine through the pybind11 bindings.
+
+## Build, setup, and run scripts
+
+- `engine/build.sh`: Configures and builds the C++ engine with CMake, then runs the unit tests via ctest. If the frontend venv exists, it auto-detects pybind11's cmake dir so the Python bindings module gets built too. Run this after any change to `engine/` C++ source.
+  ```
+  ./engine/build.sh
+  ```
+  Set `BUILD_TYPE=Debug ./engine/build.sh` for a debug build.
+
+- `frontend/setup_venv.sh`: Creates `frontend/.venv` and installs `frontend/requirements.txt`. Run this once before building the engine (so pybind11 is available) and before running the frontend.
+  ```
+  ./frontend/setup_venv.sh
+  ```
+
+- `frontend/run.sh`: Runs any command with the frontend venv's Python, without needing to activate it. Use this to run `main.py` or any other frontend script/module.
+  ```
+  ./frontend/run.sh main.py fixtures/test_tone.wav
+  ./frontend/run.sh -m pip list
+  ```
+
+Typical first-time setup: `./frontend/setup_venv.sh` then `./engine/build.sh` (so the venv exists and pybind11 module gets built), then `./frontend/run.sh main.py <file>` to run the visualizer.
 
 ## Intended architecture (per spec draft)
 
