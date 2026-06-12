@@ -36,11 +36,15 @@ public:
         py::array_t<float> waveform(frame.waveform_len);
         std::memcpy(waveform.mutable_data(), frame.waveform, frame.waveform_len * sizeof(float));
 
+        py::array_t<float> spectrum(frame.spectrum_len);
+        std::memcpy(spectrum.mutable_data(), frame.spectrum, frame.spectrum_len * sizeof(float));
+
         py::dict result;
         result["frame_index"] = frame.frame_index;
         result["sample_rate"] = frame.sample_rate;
         result["channels"] = frame.channels;
         result["waveform"] = waveform;
+        result["spectrum"] = spectrum;
         result["rms"] = frame.rms;
         result["zero_crossing_rate"] = frame.zero_crossing_rate;
         result["peak"] = frame.peak;

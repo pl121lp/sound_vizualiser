@@ -10,6 +10,7 @@ add_library(sound_viz_engine STATIC
     src/fft.cpp
     src/engine.cpp
 )
+set_target_properties(sound_viz_engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(sound_viz_engine PUBLIC include)
 target_include_directories(sound_viz_engine PRIVATE src third_party/pocketfft)
 
