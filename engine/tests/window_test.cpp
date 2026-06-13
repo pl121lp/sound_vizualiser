@@ -14,6 +14,14 @@ void test_hann_window_endpoints_and_peak() {
     assert(std::abs(w[2] - 1.0f) < 1e-6f); // center sample
 }
 
+void test_hamming_window_endpoints_and_peak() {
+    float w[5];
+    hamming_window(w, 5);
+    assert(std::abs(w[0] - 0.08f) < 1e-6f);
+    assert(std::abs(w[4] - 0.08f) < 1e-6f);
+    assert(std::abs(w[2] - 1.0f) < 1e-6f); // center sample
+}
+
 void test_apply_window() {
     float in[3] = {2.0f, 3.0f, 4.0f};
     float win[3] = {0.5f, 1.0f, 0.0f};
@@ -26,6 +34,7 @@ void test_apply_window() {
 
 int main() {
     test_hann_window_endpoints_and_peak();
+    test_hamming_window_endpoints_and_peak();
     test_apply_window();
     printf("window_test: all tests passed\n");
     return 0;
