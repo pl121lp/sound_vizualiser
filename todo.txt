@@ -2,4 +2,3 @@
 - is clang used?
 - migrate all tests to catch2 
 - how to setup claude remote? can I use it to select yes/no for ongoing job?
-- UI not very clean . text and graph elements hop around

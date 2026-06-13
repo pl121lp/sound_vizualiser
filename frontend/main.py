@@ -186,6 +186,14 @@ class WaveformWindow(QtWidgets.QMainWindow):
                 )
         self.peak_hold_line.setValue(self.peak_hold_value)
 
+    def closeEvent(self, event):
+        # Stop the timer before the window starts tearing down. Otherwise a
+        # pending on_tick can still update the plots (scheduling a repaint)
+        # while Qt's Wayland backing store is mid-teardown for the closing
+        # window, which segfaults inside QWaylandWindow::decoration().
+        self.timer.stop()
+        super().closeEvent(event)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Sound visualizer - phase 1d configurability")
