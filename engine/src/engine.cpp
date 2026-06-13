@@ -2,6 +2,7 @@
 #include "ring_buffer.h"
 #include "window.h"
 #include "fft.h"
+#include "dsp_features.h"
 
 #include <vector>
 
@@ -73,6 +74,23 @@ FeatureFrame get_latest_features(EngineHandle engine) {
     frame.waveform_len = static_cast<uint32_t>(impl->waveform_out.size());
     frame.spectrum = impl->spectrum_out.data();
     frame.spectrum_len = static_cast<uint32_t>(impl->spectrum_out.size());
+
+    frame.rms = sound_viz::compute_rms(impl->waveform_out.data(), impl->waveform_out.size());
+    frame.zero_crossing_rate = sound_viz::compute_zero_crossing_rate(
+        impl->waveform_out.data(), impl->waveform_out.size());
+    frame.peak = sound_viz::compute_peak(impl->waveform_out.data(), impl->waveform_out.size());
+
+    sound_viz::BandEnergy band_energy = sound_viz::compute_band_energy(
+        impl->spectrum_out.data(), impl->spectrum_out.size(),
+        impl->config.sample_rate, impl->config.window_size);
+    frame.band_energy_low = band_energy.low;
+    frame.band_energy_mid = band_energy.mid;
+    frame.band_energy_high = band_energy.high;
+
+    frame.spectral_centroid = sound_viz::compute_spectral_centroid(
+        impl->spectrum_out.data(), impl->spectrum_out.size(),
+        impl->config.sample_rate, impl->config.window_size);
+
     return frame;
 }
 

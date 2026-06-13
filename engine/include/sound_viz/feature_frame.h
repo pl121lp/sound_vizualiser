@@ -17,17 +17,17 @@ typedef struct {
     // Time-domain
     const float* waveform;     // populated in 1a: latest N samples, mono
     uint32_t waveform_len;     // == window_size (N)
-    float rms;                 // 0 in 1a (added in 1c)
-    float zero_crossing_rate;  // 0 in 1a (added in 1c)
-    float peak;                // 0 in 1a (added in 1c)
+    float rms;                 // populated in 1c: RMS of waveform
+    float zero_crossing_rate;  // populated in 1c: fraction of sign changes in waveform
+    float peak;                // populated in 1c: max abs sample in waveform
 
     // Frequency-domain
     const float* spectrum;     // populated in 1b: N/2+1 magnitude bins
     uint32_t spectrum_len;     // == window_size/2 + 1
-    float band_energy_low;     // 0 in 1a (added in 1c)
-    float band_energy_mid;     // 0 in 1a (added in 1c)
-    float band_energy_high;    // 0 in 1a (added in 1c)
-    float spectral_centroid;   // 0 in 1a (added in 1c)
+    float band_energy_low;     // populated in 1c: energy below 250 Hz
+    float band_energy_mid;     // populated in 1c: energy in 250-4000 Hz
+    float band_energy_high;    // populated in 1c: energy above 4000 Hz
+    float spectral_centroid;   // populated in 1c: magnitude-weighted mean frequency
 } FeatureFrame;
 
 }

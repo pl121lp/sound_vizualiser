@@ -1,6 +1,7 @@
 #include "sound_viz/engine.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 
 int main() {
@@ -24,7 +25,9 @@ int main() {
     assert(frame1.waveform[3] == 2.0f);
     assert(frame1.spectrum != nullptr);
     assert(frame1.spectrum_len == 3);
-    assert(frame1.rms == 0.0f);
+    assert(std::abs(frame1.rms - std::sqrt(1.25f)) < 1e-5f);
+    assert(frame1.peak == 2.0f);
+    assert(frame1.zero_crossing_rate == 0.0f);
     assert(frame1.frame_index == 0);
 
     // Second chunk: fills the window exactly.

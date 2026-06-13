@@ -8,6 +8,7 @@ add_library(sound_viz_engine STATIC
     src/ring_buffer.cpp
     src/window.cpp
     src/fft.cpp
+    src/dsp_features.cpp
     src/engine.cpp
 )
 set_target_properties(sound_viz_engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -34,6 +35,13 @@ add_test(NAME fft_test COMMAND fft_test)
 add_executable(engine_test tests/engine_test.cpp)
 target_link_libraries(engine_test PRIVATE sound_viz_engine)
 add_test(NAME engine_test COMMAND engine_test)
+
+find_package(Catch2 3 REQUIRED)
+
+add_executable(dsp_features_test tests/dsp_features_test.cpp)
+target_include_directories(dsp_features_test PRIVATE src)
+target_link_libraries(dsp_features_test PRIVATE sound_viz_engine Catch2::Catch2WithMain)
+add_test(NAME dsp_features_test COMMAND dsp_features_test)
 
 find_package(pybind11 CONFIG QUIET)
 if(pybind11_FOUND)
