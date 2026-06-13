@@ -10,7 +10,7 @@ struct EngineImpl {
     EngineConfig config;
     sound_viz::RingBuffer ring_buffer;
     std::vector<float> waveform_out;
-    std::vector<float> hann_coeffs;
+    std::vector<float> window_coeffs;
     std::vector<float> windowed_buf;
     std::vector<float> spectrum_out;
     uint64_t frame_counter = 0;
@@ -20,10 +20,18 @@ struct EngineImpl {
         : config(cfg),
           ring_buffer(cfg.window_size),
           waveform_out(cfg.window_size, 0.0f),
-          hann_coeffs(cfg.window_size, 0.0f),
+          window_coeffs(cfg.window_size, 0.0f),
           windowed_buf(cfg.window_size, 0.0f),
           spectrum_out(cfg.window_size / 2 + 1, 0.0f) {
-        sound_viz::hann_window(hann_coeffs.data(), hann_coeffs.size());
+        switch (config.fft_window_type) {
+            case WINDOW_HAMMING:
+                sound_viz::hamming_window(window_coeffs.data(), window_coeffs.size());
+                break;
+            case WINDOW_HANN:
+            default:
+                sound_viz::hann_window(window_coeffs.data(), window_coeffs.size());
+                break;
+        }
     }
 };
 
@@ -61,7 +69,7 @@ FeatureFrame get_latest_features(EngineHandle engine) {
     EngineImpl* impl = engine;
     impl->ring_buffer.copy_latest(impl->waveform_out.data());
 
-    sound_viz::apply_window(impl->waveform_out.data(), impl->hann_coeffs.data(),
+    sound_viz::apply_window(impl->waveform_out.data(), impl->window_coeffs.data(),
                              impl->windowed_buf.data(), impl->windowed_buf.size());
     sound_viz::real_fft_magnitude(impl->windowed_buf.data(), impl->windowed_buf.size(),
                                    impl->spectrum_out.data());
@@ -82,7 +90,8 @@ FeatureFrame get_latest_features(EngineHandle engine) {
 
     sound_viz::BandEnergy band_energy = sound_viz::compute_band_energy(
         impl->spectrum_out.data(), impl->spectrum_out.size(),
-        impl->config.sample_rate, impl->config.window_size);
+        impl->config.sample_rate, impl->config.window_size,
+        impl->config.band_split_low_hz, impl->config.band_split_high_hz);
     frame.band_energy_low = band_energy.low;
     frame.band_energy_mid = band_energy.mid;
     frame.band_energy_high = band_energy.high;

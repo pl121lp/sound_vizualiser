@@ -8,6 +8,10 @@ int main() {
     EngineConfig config{};
     config.window_size = 4;
     config.sample_rate = 44100;
+    config.update_rate_hz = 0.0f;
+    config.fft_window_type = WINDOW_HANN;
+    config.band_split_low_hz = 250.0f;
+    config.band_split_high_hz = 4000.0f;
 
     EngineHandle engine = create_engine(config);
 
@@ -52,6 +56,32 @@ int main() {
     assert(frame3.waveform[3] == 3.0f);
 
     destroy_engine(engine);
+
+    // Hamming window + custom band split configuration.
+    EngineConfig hamming_config{};
+    hamming_config.window_size = 16;
+    hamming_config.sample_rate = 44100;
+    hamming_config.update_rate_hz = 30.0f;
+    hamming_config.fft_window_type = WINDOW_HAMMING;
+    hamming_config.band_split_low_hz = 500.0f;
+    hamming_config.band_split_high_hz = 2000.0f;
+
+    EngineHandle hamming_engine = create_engine(hamming_config);
+
+    float samples[16];
+    for (int i = 0; i < 16; ++i) {
+        samples[i] = static_cast<float>(i % 4) - 1.5f; // simple non-zero signal
+    }
+    push_samples(hamming_engine, samples, 16, 1);
+
+    FeatureFrame hamming_frame = get_latest_features(hamming_engine);
+    assert(hamming_frame.waveform_len == 16);
+    assert(hamming_frame.spectrum_len == 9);
+    assert(!std::isnan(hamming_frame.rms));
+    assert(!std::isnan(hamming_frame.spectral_centroid));
+    assert(hamming_frame.rms > 0.0f);
+
+    destroy_engine(hamming_engine);
 
     printf("engine_test: all tests passed\n");
     return 0;
