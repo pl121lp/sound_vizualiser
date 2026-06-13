@@ -13,6 +13,8 @@ import sound_viz_py
 WINDOW_SIZE = 1024
 SPECTRUM_LEN = WINDOW_SIZE // 2 + 1
 CHUNK_FRAMES = 1024
+PEAK_HOLD_SECONDS = 1.0
+PEAK_DECAY_PER_SECOND = 1.0
 
 
 class BarMeter(QtWidgets.QWidget):
@@ -110,6 +112,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(container)
 
         interval_ms = int(1000 * CHUNK_FRAMES / sample_rate)
+        self.tick_interval_s = interval_ms / 1000.0
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.on_tick)
         self.timer.start(interval_ms)
@@ -129,6 +132,26 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.curve.setData(frame["waveform"])
         self.spectrum_bars.setOpts(height=frame["spectrum"])
 
+        self.rms_meter.update_value(float(frame["rms"]))
+        self.zcr_meter.update_value(float(frame["zero_crossing_rate"]))
+        self.band_low_meter.update_value(float(frame["band_energy_low"]))
+        self.band_mid_meter.update_value(float(frame["band_energy_mid"]))
+        self.band_high_meter.update_value(float(frame["band_energy_high"]))
+        self.centroid_meter.update_value(float(frame["spectral_centroid"]))
+
+        peak = float(frame["peak"])
+        self.peak_meter.update_value(peak)
+        if peak >= self.peak_hold_value:
+            self.peak_hold_value = peak
+            self.peak_hold_timer = 0.0
+        else:
+            self.peak_hold_timer += self.tick_interval_s
+            if self.peak_hold_timer > PEAK_HOLD_SECONDS:
+                self.peak_hold_value = max(
+                    peak, self.peak_hold_value - PEAK_DECAY_PER_SECOND * self.tick_interval_s
+                )
+        self.peak_hold_line.setValue(self.peak_hold_value)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Sound visualizer - phase 1b spectrum viewer")
@@ -137,7 +160,7 @@ def main():
 
     app = QtWidgets.QApplication(sys.argv)
     window = WaveformWindow(args.wav_path)
-    window.setWindowTitle("Sound Visualizer - Waveform + Spectrum (Phase 1b)")
+    window.setWindowTitle("Sound Visualizer - Waveform + Spectrum + Features (Phase 1c)")
     window.resize(800, 600)
     window.show()
     app.exec_()
