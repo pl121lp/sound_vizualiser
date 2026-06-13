@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 import soundfile as sf
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "engine", "build"))
@@ -26,8 +26,22 @@ class BarMeter(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
 
-        self.label = QtWidgets.QLabel(f"{title}: {value_format.format(0.0)}")
-        layout.addWidget(self.label)
+        label_layout = QtWidgets.QHBoxLayout()
+        label_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.title_label = QtWidgets.QLabel(f"{title}:")
+        label_layout.addWidget(self.title_label)
+
+        self.value_label = QtWidgets.QLabel()
+        self.value_label.setFont(QtGui.QFont("monospace"))
+        self.value_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        # Reserve enough horizontal space for the widest expected reading so the
+        # meter doesn't resize (and shift the bar/label) as values change.
+        self.value_label.setFixedWidth(self.value_label.fontMetrics().horizontalAdvance("0" * 10))
+        label_layout.addWidget(self.value_label)
+        label_layout.addStretch()
+
+        layout.addLayout(label_layout)
 
         self.plot = pg.PlotWidget()
         self.plot.setMaximumHeight(40)
@@ -43,6 +57,8 @@ class BarMeter(QtWidgets.QWidget):
         self.title = title
         layout.addWidget(self.plot)
 
+        self.update_value(0.0)
+
     def update_value(self, value):
         if self.auto_scale:
             self.running_max = max(self.running_max * 0.98, value)
@@ -50,7 +66,7 @@ class BarMeter(QtWidgets.QWidget):
             self.plot.setXRange(0.0, upper, padding=0)
 
         self.bar.setOpts(x0=[0.0], x1=[value])
-        self.label.setText(f"{self.title}: {self.value_format.format(value)}")
+        self.value_label.setText(self.value_format.format(value))
 
 
 class WaveformWindow(QtWidgets.QMainWindow):
@@ -78,9 +94,14 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
         self.waveform_plot = pg.PlotWidget()
         self.waveform_plot.setYRange(-1.0, 1.0)
+        self.waveform_plot.setLabel("left", "Waveform")
         self.curve = self.waveform_plot.plot(np.zeros(self.window_size))
 
         self.spectrum_plot = pg.PlotWidget()
+        self.spectrum_plot.setLabel("left", "Spectrum")
+        self.spectrum_plot.enableAutoRange("y", False)
+        self.spectrum_max = 1e-6
+        self.spectrum_plot.setYRange(0.0, self.spectrum_max, padding=0)
         self.spectrum_bars = pg.BarGraphItem(
             x=np.arange(self.spectrum_len), height=np.zeros(self.spectrum_len), width=0.8
         )
@@ -139,6 +160,11 @@ class WaveformWindow(QtWidgets.QMainWindow):
         frame = self.engine.get_latest_features()
         self.curve.setData(frame["waveform"])
         self.spectrum_bars.setOpts(height=frame["spectrum"])
+
+        spectrum_peak = float(np.max(frame["spectrum"]))
+        if spectrum_peak > self.spectrum_max:
+            self.spectrum_max = spectrum_peak * 1.1
+            self.spectrum_plot.setYRange(0.0, self.spectrum_max, padding=0)
 
         self.rms_meter.update_value(float(frame["rms"]))
         self.zcr_meter.update_value(float(frame["zero_crossing_rate"]))
