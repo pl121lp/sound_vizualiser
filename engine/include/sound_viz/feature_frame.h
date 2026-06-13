@@ -4,9 +4,18 @@
 
 extern "C" {
 
+typedef enum {
+    WINDOW_HANN = 0,
+    WINDOW_HAMMING = 1,
+} FftWindowType;
+
 typedef struct {
-    uint32_t window_size;   // N, e.g. 1024 — size of the analysis window
-    uint32_t sample_rate;   // from WAV header; echoed back in FeatureFrame
+    uint32_t window_size;       // N, e.g. 1024 — size of the analysis window
+    uint32_t sample_rate;       // from WAV header; echoed back in FeatureFrame
+    float update_rate_hz;       // advisory; echoed back, not used by the engine
+    FftWindowType fft_window_type; // Hann or Hamming window applied before FFT
+    float band_split_low_hz;    // low/mid band energy split point (Hz)
+    float band_split_high_hz;   // mid/high band energy split point (Hz)
 } EngineConfig;
 
 typedef struct {
