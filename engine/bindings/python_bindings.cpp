@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 
 #include <cstring>
+#include <string>
 
 #include "sound_viz/engine.h"
 
@@ -9,10 +10,26 @@ namespace py = pybind11;
 
 class PyEngine {
 public:
-    PyEngine(uint32_t window_size, uint32_t sample_rate) {
+    PyEngine(uint32_t window_size, uint32_t sample_rate,
+             float update_rate_hz = 0.0f,
+             const std::string& fft_window_type = "hann",
+             float band_split_low_hz = 250.0f,
+             float band_split_high_hz = 4000.0f) {
         EngineConfig config{};
         config.window_size = window_size;
         config.sample_rate = sample_rate;
+        config.update_rate_hz = update_rate_hz;
+        config.band_split_low_hz = band_split_low_hz;
+        config.band_split_high_hz = band_split_high_hz;
+
+        if (fft_window_type == "hann") {
+            config.fft_window_type = WINDOW_HANN;
+        } else if (fft_window_type == "hamming") {
+            config.fft_window_type = WINDOW_HAMMING;
+        } else {
+            throw py::value_error("fft_window_type must be 'hann' or 'hamming'");
+        }
+
         handle_ = create_engine(config);
     }
 
@@ -61,7 +78,12 @@ private:
 
 PYBIND11_MODULE(sound_viz_py, m) {
     py::class_<PyEngine>(m, "Engine")
-        .def(py::init<uint32_t, uint32_t>(), py::arg("window_size"), py::arg("sample_rate"))
+        .def(py::init<uint32_t, uint32_t, float, const std::string&, float, float>(),
+             py::arg("window_size"), py::arg("sample_rate"),
+             py::arg("update_rate_hz") = 0.0f,
+             py::arg("fft_window_type") = "hann",
+             py::arg("band_split_low_hz") = 250.0f,
+             py::arg("band_split_high_hz") = 4000.0f)
         .def("push_samples", &PyEngine::push_samples, py::arg("samples"), py::arg("n_channels") = 1)
         .def("get_latest_features", &PyEngine::get_latest_features);
 }
