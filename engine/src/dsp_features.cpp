@@ -4,11 +4,6 @@
 
 namespace sound_viz {
 
-namespace {
-constexpr float kBandLowMidHz = 250.0f;
-constexpr float kBandMidHighHz = 4000.0f;
-}
-
 float compute_rms(const float* samples, size_t n) {
     if (n == 0) {
         return 0.0f;
@@ -48,15 +43,16 @@ float compute_peak(const float* samples, size_t n) {
 }
 
 BandEnergy compute_band_energy(const float* spectrum, size_t spectrum_len,
-                                uint32_t sample_rate, uint32_t window_size) {
+                                uint32_t sample_rate, uint32_t window_size,
+                                float low_split_hz, float high_split_hz) {
     BandEnergy result{0.0f, 0.0f, 0.0f};
     for (size_t i = 0; i < spectrum_len; ++i) {
         float freq = static_cast<float>(i) * static_cast<float>(sample_rate) /
                       static_cast<float>(window_size);
         float energy = spectrum[i] * spectrum[i];
-        if (freq < kBandLowMidHz) {
+        if (freq < low_split_hz) {
             result.low += energy;
-        } else if (freq < kBandMidHighHz) {
+        } else if (freq < high_split_hz) {
             result.mid += energy;
         } else {
             result.high += energy;

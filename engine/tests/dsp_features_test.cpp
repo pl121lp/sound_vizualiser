@@ -90,7 +90,7 @@ TEST_CASE("compute_band_energy puts a 1kHz tone in the mid band", "[features]") 
 
     BandEnergy energy = compute_band_energy(spectrum.data(), spectrum.size(),
                                              static_cast<uint32_t>(sample_rate),
-                                             static_cast<uint32_t>(n));
+                                             static_cast<uint32_t>(n), 250.0f, 4000.0f);
     REQUIRE(energy.mid > energy.low);
     REQUIRE(energy.mid > energy.high);
 }
@@ -104,7 +104,23 @@ TEST_CASE("compute_band_energy puts a 100Hz tone in the low band", "[features]")
 
     BandEnergy energy = compute_band_energy(spectrum.data(), spectrum.size(),
                                              static_cast<uint32_t>(sample_rate),
-                                             static_cast<uint32_t>(n));
+                                             static_cast<uint32_t>(n), 250.0f, 4000.0f);
+    REQUIRE(energy.low > energy.mid);
+    REQUIRE(energy.low > energy.high);
+}
+
+TEST_CASE("compute_band_energy respects custom split points", "[features]") {
+    const size_t n = 1024;
+    const double sample_rate = 44100.0;
+    const double freq = 1000.0;
+
+    std::vector<float> spectrum = sine_spectrum(freq, sample_rate, n);
+
+    // With the default 250/4000 Hz split, 1 kHz falls in "mid". With a
+    // 2000 Hz low/mid split, 1 kHz now falls in "low".
+    BandEnergy energy = compute_band_energy(spectrum.data(), spectrum.size(),
+                                             static_cast<uint32_t>(sample_rate),
+                                             static_cast<uint32_t>(n), 2000.0f, 8000.0f);
     REQUIRE(energy.low > energy.mid);
     REQUIRE(energy.low > energy.high);
 }

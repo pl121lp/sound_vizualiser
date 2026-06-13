@@ -22,10 +22,11 @@ struct BandEnergy {
 };
 
 // Sums squared magnitudes from `spectrum` (spectrum_len == window_size/2 + 1)
-// into low/mid/high bands, split at 250 Hz and 4000 Hz. Bin i corresponds to
-// frequency i * sample_rate / window_size.
+// into low/mid/high bands, split at `low_split_hz` and `high_split_hz`.
+// Bin i corresponds to frequency i * sample_rate / window_size.
 BandEnergy compute_band_energy(const float* spectrum, size_t spectrum_len,
-                                uint32_t sample_rate, uint32_t window_size);
+                                uint32_t sample_rate, uint32_t window_size,
+                                float low_split_hz, float high_split_hz);
 
 // Magnitude-weighted mean frequency of `spectrum`. Returns 0 if the spectrum
 // has zero total energy.
