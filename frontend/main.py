@@ -15,6 +15,45 @@ SPECTRUM_LEN = WINDOW_SIZE // 2 + 1
 CHUNK_FRAMES = 1024
 
 
+class BarMeter(QtWidgets.QWidget):
+    """A horizontal bar gauge with a title label and a live numeric readout."""
+
+    def __init__(self, title, value_format, x_range=(0.0, 1.0), auto_scale=False):
+        super().__init__()
+        self.value_format = value_format
+        self.auto_scale = auto_scale
+        self.running_max = 1e-6
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(2, 2, 2, 2)
+
+        self.label = QtWidgets.QLabel(f"{title}: {value_format.format(0.0)}")
+        layout.addWidget(self.label)
+
+        self.plot = pg.PlotWidget()
+        self.plot.setMaximumHeight(40)
+        self.plot.hideAxis("left")
+        self.plot.hideAxis("bottom")
+        self.plot.setMouseEnabled(x=False, y=False)
+        self.plot.setYRange(-0.5, 0.5, padding=0)
+        self.plot.setXRange(*x_range, padding=0)
+
+        self.bar = pg.BarGraphItem(x0=[0.0], x1=[0.0], y0=[-0.3], y1=[0.3], brush="c")
+        self.plot.addItem(self.bar)
+
+        self.title = title
+        layout.addWidget(self.plot)
+
+    def update_value(self, value):
+        if self.auto_scale:
+            self.running_max = max(self.running_max * 0.98, value)
+            upper = max(self.running_max * 1.2, 1e-6)
+            self.plot.setXRange(0.0, upper, padding=0)
+
+        self.bar.setOpts(x0=[0.0], x1=[value])
+        self.label.setText(f"{self.title}: {self.value_format.format(value)}")
+
+
 class WaveformWindow(QtWidgets.QMainWindow):
     def __init__(self, wav_path):
         super().__init__()
@@ -37,10 +76,37 @@ class WaveformWindow(QtWidgets.QMainWindow):
         )
         self.spectrum_plot.addItem(self.spectrum_bars)
 
+        self.rms_meter = BarMeter("RMS", "{:.3f}", x_range=(0.0, 1.0))
+        self.zcr_meter = BarMeter("Zero-crossing rate", "{:.3f}", x_range=(0.0, 1.0))
+        self.peak_meter = BarMeter("Peak", "{:.3f}", x_range=(0.0, 1.0))
+        self.band_low_meter = BarMeter("Band energy (low)", "{:.2f}", auto_scale=True)
+        self.band_mid_meter = BarMeter("Band energy (mid)", "{:.2f}", auto_scale=True)
+        self.band_high_meter = BarMeter("Band energy (high)", "{:.2f}", auto_scale=True)
+        self.centroid_meter = BarMeter("Spectral centroid (Hz)", "{:.0f}", auto_scale=True)
+
+        self.peak_hold_line = pg.InfiniteLine(pos=0.0, angle=90, pen=pg.mkPen("r", width=2))
+        self.peak_meter.plot.addItem(self.peak_hold_line)
+        self.peak_hold_value = 0.0
+        self.peak_hold_timer = 0.0
+
         container = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(container)
         layout.addWidget(self.waveform_plot)
         layout.addWidget(self.spectrum_plot)
+
+        meters_layout = QtWidgets.QHBoxLayout()
+        for meter in (
+            self.rms_meter,
+            self.zcr_meter,
+            self.peak_meter,
+            self.band_low_meter,
+            self.band_mid_meter,
+            self.band_high_meter,
+            self.centroid_meter,
+        ):
+            meters_layout.addWidget(meter)
+        layout.addLayout(meters_layout)
+
         self.setCentralWidget(container)
 
         interval_ms = int(1000 * CHUNK_FRAMES / sample_rate)
