@@ -159,11 +159,23 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.peak_meter.plot.addItem(self.peak_hold_line)
         self.peak_hold_value = 0.0
         self.peak_hold_timer = 0.0
+        self.spectrogram = SpectrogramPanel(self.spectrum_len, sample_rate, args.update_rate)
+        self.peak_hold_spectrum = np.zeros(self.spectrum_len, dtype=np.float32)
+        self.peak_hold_timer_spectrum = np.zeros(self.spectrum_len, dtype=np.float32)
+        self.peak_hold_dots = pg.ScatterPlotItem(
+            x=np.arange(self.spectrum_len),
+            y=self.peak_hold_spectrum,
+            pen=None,
+            brush=pg.mkBrush("r"),
+            size=3,
+        )
+        self.spectrum_plot.addItem(self.peak_hold_dots)
 
         container = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(container)
-        layout.addWidget(self.waveform_plot)
-        layout.addWidget(self.spectrum_plot)
+        layout.addWidget(self.waveform_plot, stretch=1)
+        layout.addWidget(self.spectrum_plot, stretch=1)
+        layout.addWidget(self.spectrogram, stretch=2)
 
         meters_layout = QtWidgets.QHBoxLayout()
         for meter in (
@@ -205,6 +217,22 @@ class WaveformWindow(QtWidgets.QMainWindow):
         if spectrum_peak > self.spectrum_max:
             self.spectrum_max = spectrum_peak * 1.1
             self.spectrum_plot.setYRange(0.0, self.spectrum_max, padding=0)
+
+        self.spectrogram.update(frame["spectrum"])
+
+        spectrum = np.asarray(frame["spectrum"], dtype=np.float32)
+        self.peak_hold_spectrum, self.peak_hold_timer_spectrum = update_peak_hold(
+            spectrum,
+            self.peak_hold_spectrum,
+            self.peak_hold_timer_spectrum,
+            self.tick_interval_s,
+            PEAK_HOLD_SECONDS,
+            PEAK_DECAY_PER_SECOND,
+        )
+        self.peak_hold_dots.setData(
+            x=np.arange(self.spectrum_len),
+            y=self.peak_hold_spectrum,
+        )
 
         self.rms_meter.update_value(float(frame["rms"]))
         self.zcr_meter.update_value(float(frame["zero_crossing_rate"]))
