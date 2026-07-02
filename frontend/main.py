@@ -9,9 +9,49 @@ import pyqtgraph as pg
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "engine", "build"))
 import sound_viz_py
+from audio_math import make_log_freq_grid, to_db_normalized, update_peak_hold
 
 PEAK_HOLD_SECONDS = 1.0
 PEAK_DECAY_PER_SECOND = 1.0
+
+
+class SpectrogramPanel(QtWidgets.QWidget):
+    def __init__(self, spectrum_len: int, sample_rate: float, update_rate: float):
+        super().__init__()
+
+        n_freq_rows = 256
+        history_cols = max(1, int(np.ceil(update_rate * 5.0)))
+
+        self._log_freqs, self._linear_freqs = make_log_freq_grid(
+            spectrum_len, sample_rate, n_freq_rows
+        )
+        self._buffer = np.zeros((history_cols, n_freq_rows), dtype=np.float32)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._plot = pg.PlotWidget()
+        self._plot.setLabel("left", "Frequency (Hz)")
+        self._plot.setLabel("bottom", "Time →")
+        self._plot.setMouseEnabled(x=False, y=False)
+        self._plot.hideAxis("bottom")
+
+        cm = pg.colormap.get("inferno")
+        self._image = pg.ImageItem()
+        self._image.setColorMap(cm)
+        self._image.setLevels([0.0, 1.0])
+        self._plot.addItem(self._image)
+
+        layout.addWidget(self._plot)
+        self.setMinimumHeight(150)
+
+    def update(self, spectrum: np.ndarray) -> None:
+        col = to_db_normalized(
+            np.interp(self._log_freqs, self._linear_freqs, spectrum).astype(np.float32)
+        )
+        self._buffer = np.roll(self._buffer, -1, axis=0)
+        self._buffer[-1] = col
+        self._image.setImage(self._buffer)
 
 
 class BarMeter(QtWidgets.QWidget):
