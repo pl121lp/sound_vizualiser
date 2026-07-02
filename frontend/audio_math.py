@@ -15,3 +15,29 @@ def to_db_normalized(
     db = 20.0 * np.log10(np.asarray(spectrum, dtype=np.float64) + 1e-9)
     db = np.clip(db, db_min, db_max)
     return ((db - db_min) / (db_max - db_min)).astype(np.float32)
+
+
+def update_peak_hold(
+    spectrum: np.ndarray,
+    peak_values: np.ndarray,
+    peak_timers: np.ndarray,
+    dt: float,
+    hold_secs: float = 1.0,
+    decay_per_sec: float = 1.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    spectrum = np.asarray(spectrum)
+    peak_values = peak_values.copy()
+    peak_timers = peak_timers.copy()
+
+    new_peak = spectrum >= peak_values
+    peak_values[new_peak] = spectrum[new_peak]
+    peak_timers[new_peak] = 0.0
+
+    peak_timers[~new_peak] += dt
+    decaying = (~new_peak) & (peak_timers > hold_secs)
+    peak_values[decaying] = np.maximum(
+        spectrum[decaying],
+        peak_values[decaying] - decay_per_sec * dt,
+    )
+
+    return peak_values, peak_timers
