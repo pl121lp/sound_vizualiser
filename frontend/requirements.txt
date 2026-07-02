@@ -3,3 +3,4 @@ pybind11
 soundfile
 pyqtgraph
 PyQt5
+pytest>=7.0
