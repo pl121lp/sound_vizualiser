@@ -43,9 +43,10 @@ spectrum):
 Precomputed once at startup in `RadialSpectrumPanel.__init__`:
 
 - `n_bins` angles evenly spaced around the full circle (`2*pi / n_bins` apart).
-- Bin 0 (lowest frequency) at the top (angle = `-pi/2` in standard math convention, i.e.
-  12 o'clock), increasing clockwise through to the highest frequency just short of 12
-  o'clock again.
+- Bin 0 (lowest frequency) at the top (angle = `pi/2` in standard math convention — the
+  `PlotWidget`'s y-axis increases upward, so `pi/2` is 12 o'clock), decreasing angle as
+  bin index increases so the sweep goes clockwise through to the highest frequency just
+  short of 12 o'clock again.
 - `cos_angles`, `sin_angles` arrays of shape `(n_bins,)` precomputed once and reused every
   tick — no trig in the per-frame update path.
 
@@ -83,7 +84,7 @@ def polar_bar_endpoints(
 Unit tests (pytest, mirroring `test_audio_math.py` style):
 - All-zero magnitudes → every outer point sits exactly at `inner_radius` (spoke length 0).
 - All-one magnitudes → every outer point sits at `inner_radius + bar_scale`.
-- Known single-bin case (e.g. bin 0 at angle `-pi/2`) → exact expected `(x, y)` pair,
+- Known single-bin case (e.g. bin 0 at angle `pi/2`) → exact expected `(x, y)` pair,
   checked with `np.isclose`.
 
 A second small helper, `make_radial_angles(n_bins)`, returns `(cos_angles, sin_angles)`
@@ -92,7 +93,7 @@ one place:
 
 ```python
 def make_radial_angles(n_bins: int) -> tuple[np.ndarray, np.ndarray]:
-    angles = -np.pi / 2 + 2 * np.pi * np.arange(n_bins) / n_bins
+    angles = np.pi / 2 - 2 * np.pi * np.arange(n_bins) / n_bins
     return np.cos(angles), np.sin(angles)
 ```
 
