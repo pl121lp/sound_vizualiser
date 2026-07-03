@@ -2,3 +2,12 @@
 - is clang used?
 - migrate all tests to catch2 
 - how to setup claude remote? can I use it to select yes/no for ongoing job?
+
+
+add another toolbar that shows the current input audio file path. 
+add a button to the toolbar to select another input audio file, which will restart the visualization
+in this toolbar also add a toggle for looping if input is audio file
+in this toolbar also add a button to restart from beginning, if input is audio file
+add a button/mode to the toolbar to take input from microphone instead of file (phase 2e)
+
+playback
