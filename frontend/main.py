@@ -18,6 +18,7 @@ from audio_math import (
     to_db_normalized,
     update_peak_hold,
 )
+from mic_input import MicInputSource, MicUnavailableError
 
 PEAK_HOLD_SECONDS = 1.0
 PEAK_DECAY_PER_SECOND = 1.0
@@ -186,6 +187,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.file_path = None
         self.loop_enabled = False
         self.mic_enabled = False
+        self.mic_source = None
         self.engine = None
 
         self.waveform_plot = pg.PlotWidget()
@@ -379,7 +381,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
     def _update_path_label(self):
         if self.mic_enabled:
-            self.path_label.setText("Microphone (not implemented)")
+            self.path_label.setText("Microphone (default input device)")
         elif self.has_file:
             self.path_label.setText(self.file_path)
         else:
@@ -407,11 +409,37 @@ class WaveformWindow(QtWidgets.QMainWindow):
         dialog.open()
 
     def on_mic_toggled(self, checked):
-        self.mic_enabled = checked
-        self.open_action.setEnabled(not checked)
-        self._set_transport_enabled(self.has_file)
         if checked:
-            self.set_paused(True)
+            mic_source = MicInputSource()
+            try:
+                mic_source.start()
+            except MicUnavailableError as exc:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Microphone unavailable",
+                    f"Could not start microphone capture:\n{exc}",
+                )
+                self.mic_action.blockSignals(True)
+                self.mic_action.setChecked(False)
+                self.mic_action.blockSignals(False)
+                return
+
+            self.mic_source = mic_source
+            self.mic_enabled = True
+            self.open_action.setEnabled(False)
+            self._set_transport_enabled(self.has_file)
+            self._configure_for_sample_rate(self.mic_source.sample_rate)
+            self.set_paused(False)
+        else:
+            self.mic_enabled = False
+            self.mic_source.stop()
+            self.mic_source = None
+            self.open_action.setEnabled(True)
+            self._set_transport_enabled(self.has_file)
+            if self.has_file:
+                self._configure_for_sample_rate(self.file_sample_rate)
+                self.set_paused(True)
+
         self._update_path_label()
 
     def on_loop_toggled(self, checked):
@@ -434,18 +462,24 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self.pause_action.blockSignals(False)
 
     def on_tick(self):
-        self.read_pos, should_pause = advance_or_pause(
-            self.read_pos, len(self.data), self.loop_enabled
-        )
-        if should_pause:
-            self.pause_action.setChecked(True)
-            return
+        if self.mic_enabled:
+            chunk = self.mic_source.read_available()
+            if chunk is None:
+                return
+            self.engine.push_samples(chunk, 1)
+        else:
+            self.read_pos, should_pause = advance_or_pause(
+                self.read_pos, len(self.data), self.loop_enabled
+            )
+            if should_pause:
+                self.pause_action.setChecked(True)
+                return
 
-        chunk = self.data[self.read_pos:self.read_pos + self.chunk_frames]
-        self.read_pos += self.chunk_frames
+            chunk = self.data[self.read_pos:self.read_pos + self.chunk_frames]
+            self.read_pos += self.chunk_frames
 
-        flat = chunk.reshape(-1).astype(np.float32)
-        self.engine.push_samples(flat, self.n_channels)
+            flat = chunk.reshape(-1).astype(np.float32)
+            self.engine.push_samples(flat, self.n_channels)
 
         frame = self.engine.get_latest_features()
         self._process_frame(frame)
@@ -581,6 +615,8 @@ class WaveformWindow(QtWidgets.QMainWindow):
         # while Qt's Wayland backing store is mid-teardown for the closing
         # window, which segfaults inside QWaylandWindow::decoration().
         self.timer.stop()
+        if self.mic_source is not None:
+            self.mic_source.stop()
         super().closeEvent(event)
 
 
