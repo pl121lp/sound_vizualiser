@@ -430,7 +430,7 @@ Replace with:
 
 - [ ] **Step 3: Manually verify file playback is unchanged**
 
-Run: `./frontend/run.sh main.py frontend/fixtures/test_tone.wav`
+Run: `./frontend/run.sh frontend/main.py frontend/fixtures/test_tone.wav`
 Expected: window opens, waveform/spectrum/spectrogram/radial/meters all animate exactly
 as before this refactor (this is a pure code-motion change — no behavior difference).
 Close the window when confirmed.
@@ -606,7 +606,7 @@ Replace with:
 
 - [ ] **Step 2: Manually verify file playback is unchanged**
 
-Run: `./frontend/run.sh main.py frontend/fixtures/test_tone.wav`
+Run: `./frontend/run.sh frontend/main.py frontend/fixtures/test_tone.wav`
 Expected: identical behavior to Task 2's manual check. Close the window when confirmed.
 
 - [ ] **Step 3: Commit**
@@ -836,7 +836,7 @@ Replace with:
 
 - [ ] **Step 7: Manually verify the mic-unavailable path**
 
-Run: `./frontend/run.sh main.py frontend/fixtures/test_tone.wav`
+Run: `./frontend/run.sh frontend/main.py frontend/fixtures/test_tone.wav`
 
 With the file playing, click the "Mic" toolbar button.
 
