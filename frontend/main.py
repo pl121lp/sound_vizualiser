@@ -386,11 +386,19 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.pause_action.setEnabled(file_controls_enabled)
 
     def on_open_file(self):
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        # Not QFileDialog.getOpenFileName()/.exec_(): on this Qt/Wayland stack a
+        # modal (nested-event-loop) QFileDialog never paints and spins the CPU
+        # forever. The non-modal .open() + fileSelected signal path renders
+        # correctly and doesn't block, so use that instead.
+        dialog = QtWidgets.QFileDialog(
             self, "Select Audio File", "", "WAV files (*.wav);;All files (*)"
         )
-        if path:
-            self.load_file(path)
+        dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
+        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptOpen)
+        dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        dialog.fileSelected.connect(self.load_file)
+        self._open_dialog = dialog
+        dialog.open()
 
     def on_mic_toggled(self, checked):
         self.mic_enabled = checked
