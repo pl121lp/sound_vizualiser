@@ -428,7 +428,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self.mic_enabled = True
             self.open_action.setEnabled(False)
             self._set_transport_enabled(self.has_file)
-            self._configure_for_sample_rate(self.mic_source.sample_rate)
+            self._configure_for_sample_rate(int(round(self.mic_source.sample_rate)))
             self.set_paused(False)
         else:
             self.mic_enabled = False
@@ -438,7 +438,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self._set_transport_enabled(self.has_file)
             if self.has_file:
                 self._configure_for_sample_rate(self.file_sample_rate)
-                self.set_paused(True)
+            self.set_paused(True)
 
         self._update_path_label()
 
@@ -468,6 +468,8 @@ class WaveformWindow(QtWidgets.QMainWindow):
                 return
             self.engine.push_samples(chunk, 1)
         else:
+            if self.data is None:
+                return
             self.read_pos, should_pause = advance_or_pause(
                 self.read_pos, len(self.data), self.loop_enabled
             )
