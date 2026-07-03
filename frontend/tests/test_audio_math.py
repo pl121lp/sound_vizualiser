@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from audio_math import make_log_freq_grid, to_db_normalized, update_peak_hold
+from audio_math import make_log_freq_grid, make_radial_angles, to_db_normalized, update_peak_hold
 
 
 def test_make_log_freq_grid_shape():
@@ -108,3 +108,28 @@ def test_update_peak_hold_does_not_mutate_inputs():
     update_peak_hold(spectrum, peak_values, peak_timers, dt=0.1)
     np.testing.assert_array_equal(peak_values, orig_peak)
     np.testing.assert_array_equal(peak_timers, orig_timer)
+
+
+def test_make_radial_angles_shape():
+    cos_angles, sin_angles = make_radial_angles(4)
+    assert cos_angles.shape == (4,)
+    assert sin_angles.shape == (4,)
+
+
+def test_make_radial_angles_bin0_at_top():
+    cos_angles, sin_angles = make_radial_angles(4)
+    assert cos_angles[0] == pytest.approx(0.0, abs=1e-6)
+    assert sin_angles[0] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_make_radial_angles_sweeps_clockwise():
+    # With bin 0 at 12 o'clock, bin 1 (of 4) should land at 3 o'clock if the
+    # sweep is clockwise.
+    cos_angles, sin_angles = make_radial_angles(4)
+    assert cos_angles[1] == pytest.approx(1.0, abs=1e-6)
+    assert sin_angles[1] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_make_radial_angles_unit_circle():
+    cos_angles, sin_angles = make_radial_angles(37)
+    np.testing.assert_allclose(cos_angles**2 + sin_angles**2, 1.0, atol=1e-10)

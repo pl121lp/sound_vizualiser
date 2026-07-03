@@ -41,3 +41,8 @@ def update_peak_hold(
     )
 
     return peak_values, peak_timers
+
+
+def make_radial_angles(n_bins: int) -> tuple[np.ndarray, np.ndarray]:
+    angles = np.pi / 2 - 2 * np.pi * np.arange(n_bins) / n_bins
+    return np.cos(angles), np.sin(angles)
