@@ -1,4 +1,9 @@
-# Phase 2e: Transport Toolbar (file select, loop, restart, pause, mic stub)
+# Transport Toolbar (file select, loop, restart, pause, mic stub)
+
+Extends **Phase 2d** (UI controls) per `project_spec_final.md`. This is not
+Phase 2e — that phase name is reserved in the spec for actually implementing
+live microphone capture, which is explicitly out of scope here (the Mic
+toggle is UI-only, see "Out of scope").
 
 ## Summary
 
