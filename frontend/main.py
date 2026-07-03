@@ -237,7 +237,9 @@ class WaveformWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.spectrogram, stretch=2)
         layout.addWidget(self.radial_spectrum, stretch=2)
 
-        meters_layout = QtWidgets.QHBoxLayout()
+        self.meters_container = QtWidgets.QWidget()
+        meters_layout = QtWidgets.QHBoxLayout(self.meters_container)
+        meters_layout.setContentsMargins(0, 0, 0, 0)
         for meter in (
             self.rms_meter,
             self.zcr_meter,
@@ -248,7 +250,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self.centroid_meter,
         ):
             meters_layout.addWidget(meter)
-        layout.addLayout(meters_layout)
+        layout.addWidget(self.meters_container)
 
         self.setCentralWidget(container)
 
@@ -257,6 +259,8 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.on_tick)
         self.timer.start(interval_ms)
+
+        self.build_toolbar()
 
     def on_tick(self):
         if self.read_pos >= len(self.data):
@@ -270,50 +274,85 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.engine.push_samples(flat, self.n_channels)
 
         frame = self.engine.get_latest_features()
-        self.curve.setData(frame["waveform"])
-        self.spectrum_bars.setOpts(height=frame["spectrum"])
 
-        spectrum_peak = float(np.max(frame["spectrum"]))
-        if spectrum_peak > self.spectrum_max:
-            self.spectrum_max = spectrum_peak * 1.1
-            self.spectrum_plot.setYRange(0.0, self.spectrum_max, padding=0)
+        if self.show_waveform:
+            self.curve.setData(frame["waveform"])
 
-        self.spectrogram.update(frame["spectrum"])
+        if self.show_spectrum:
+            self.spectrum_bars.setOpts(height=frame["spectrum"])
+            spectrum_peak = float(np.max(frame["spectrum"]))
+            if spectrum_peak > self.spectrum_max:
+                self.spectrum_max = spectrum_peak * 1.1
+                self.spectrum_plot.setYRange(0.0, self.spectrum_max, padding=0)
 
-        spectrum = np.asarray(frame["spectrum"], dtype=np.float32)
-        self.peak_hold_spectrum, self.peak_hold_timer_spectrum = update_peak_hold(
-            spectrum,
-            self.peak_hold_spectrum,
-            self.peak_hold_timer_spectrum,
-            self.tick_interval_s,
-            PEAK_HOLD_SECONDS,
-            PEAK_DECAY_PER_SECOND,
-        )
-        self.peak_hold_dots.setData(
-            x=np.arange(self.spectrum_len),
-            y=self.peak_hold_spectrum,
-        )
-        self.radial_spectrum.update(spectrum, self.peak_hold_spectrum)
+        if self.show_spectrogram:
+            self.spectrogram.update(frame["spectrum"])
 
-        self.rms_meter.update_value(float(frame["rms"]))
-        self.zcr_meter.update_value(float(frame["zero_crossing_rate"]))
-        self.band_low_meter.update_value(float(frame["band_energy_low"]))
-        self.band_mid_meter.update_value(float(frame["band_energy_mid"]))
-        self.band_high_meter.update_value(float(frame["band_energy_high"]))
-        self.centroid_meter.update_value(float(frame["spectral_centroid"]))
-
-        peak = float(frame["peak"])
-        self.peak_meter.update_value(peak)
-        if peak >= self.peak_hold_value:
-            self.peak_hold_value = peak
-            self.peak_hold_timer = 0.0
-        else:
-            self.peak_hold_timer += self.tick_interval_s
-            if self.peak_hold_timer > PEAK_HOLD_SECONDS:
-                self.peak_hold_value = max(
-                    peak, self.peak_hold_value - PEAK_DECAY_PER_SECOND * self.tick_interval_s
+        if self.show_spectrum or self.show_radial:
+            spectrum = np.asarray(frame["spectrum"], dtype=np.float32)
+            self.peak_hold_spectrum, self.peak_hold_timer_spectrum = update_peak_hold(
+                spectrum,
+                self.peak_hold_spectrum,
+                self.peak_hold_timer_spectrum,
+                self.tick_interval_s,
+                PEAK_HOLD_SECONDS,
+                PEAK_DECAY_PER_SECOND,
+            )
+            if self.show_spectrum:
+                self.peak_hold_dots.setData(
+                    x=np.arange(self.spectrum_len),
+                    y=self.peak_hold_spectrum,
                 )
-        self.peak_hold_line.setValue(self.peak_hold_value)
+            if self.show_radial:
+                self.radial_spectrum.update(spectrum, self.peak_hold_spectrum)
+
+        if self.show_meters:
+            self.rms_meter.update_value(float(frame["rms"]))
+            self.zcr_meter.update_value(float(frame["zero_crossing_rate"]))
+            self.band_low_meter.update_value(float(frame["band_energy_low"]))
+            self.band_mid_meter.update_value(float(frame["band_energy_mid"]))
+            self.band_high_meter.update_value(float(frame["band_energy_high"]))
+            self.centroid_meter.update_value(float(frame["spectral_centroid"]))
+
+            peak = float(frame["peak"])
+            self.peak_meter.update_value(peak)
+            if peak >= self.peak_hold_value:
+                self.peak_hold_value = peak
+                self.peak_hold_timer = 0.0
+            else:
+                self.peak_hold_timer += self.tick_interval_s
+                if self.peak_hold_timer > PEAK_HOLD_SECONDS:
+                    self.peak_hold_value = max(
+                        peak, self.peak_hold_value - PEAK_DECAY_PER_SECOND * self.tick_interval_s
+                    )
+            self.peak_hold_line.setValue(self.peak_hold_value)
+
+    def build_toolbar(self):
+        toolbar = self.addToolBar("Controls")
+        toolbar.setMovable(False)
+
+        panel_specs = [
+            ("Waveform", "1", self.waveform_plot, "show_waveform"),
+            ("Spectrum", "2", self.spectrum_plot, "show_spectrum"),
+            ("Spectrogram", "3", self.spectrogram, "show_spectrogram"),
+            ("Radial", "4", self.radial_spectrum, "show_radial"),
+            ("Meters", "5", self.meters_container, "show_meters"),
+        ]
+        self.panel_actions = {}
+        for label, key, widget, flag_attr in panel_specs:
+            action = QtWidgets.QAction(label, self)
+            action.setCheckable(True)
+            action.setShortcut(QtGui.QKeySequence(key))
+            action.toggled.connect(
+                lambda checked, w=widget, attr=flag_attr: self.on_panel_toggled(checked, w, attr)
+            )
+            action.setChecked(True)
+            toolbar.addAction(action)
+            self.panel_actions[flag_attr] = action
+
+    def on_panel_toggled(self, checked, widget, flag_attr):
+        widget.setVisible(checked)
+        setattr(self, flag_attr, checked)
 
     def closeEvent(self, event):
         # Stop the timer before the window starts tearing down. Otherwise a
