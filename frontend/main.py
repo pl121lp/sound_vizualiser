@@ -260,6 +260,12 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.on_tick)
         self.timer.start(interval_ms)
 
+        self.show_waveform = True
+        self.show_spectrum = True
+        self.show_spectrogram = True
+        self.show_radial = True
+        self.show_meters = True
+
         self.build_toolbar()
 
     def on_tick(self):

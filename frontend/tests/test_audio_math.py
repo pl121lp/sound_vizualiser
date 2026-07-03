@@ -190,3 +190,7 @@ def test_rate_hz_to_chunk_frames_low_rate_large_chunk():
 
 def test_rate_hz_to_chunk_frames_floors_at_one_frame():
     assert rate_hz_to_chunk_frames(44100.0, 100000.0) == 1
+
+
+def test_rate_hz_to_chunk_frames_rounds_non_integer_quotient():
+    assert rate_hz_to_chunk_frames(44100.0, 8.0) == 5512
