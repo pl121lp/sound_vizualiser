@@ -350,9 +350,47 @@ class WaveformWindow(QtWidgets.QMainWindow):
             toolbar.addAction(action)
             self.panel_actions[flag_attr] = action
 
+        toolbar.addSeparator()
+
+        toolbar.addWidget(QtWidgets.QLabel("Rate:"))
+
+        self.rate_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.rate_slider.setRange(5, 60)
+        self.rate_slider.setSingleStep(5)
+        self.rate_slider.setPageStep(5)
+        self.rate_slider.setTickInterval(5)
+        self.rate_slider.setFixedWidth(120)
+        self.rate_value_label = QtWidgets.QLabel()
+
+        initial_rate = min(60, max(5, round(self.rate_hz / 5) * 5))
+        self.rate_slider.setValue(initial_rate)
+        self.rate_slider.valueChanged.connect(self.on_rate_changed)
+        self.on_rate_changed(self.rate_slider.value())
+
+        toolbar.addWidget(self.rate_slider)
+        toolbar.addWidget(self.rate_value_label)
+
+        rate_up = QtWidgets.QAction(self)
+        rate_up.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Up))
+        rate_up.triggered.connect(lambda: self.rate_slider.setValue(self.rate_slider.value() + 5))
+        self.addAction(rate_up)
+
+        rate_down = QtWidgets.QAction(self)
+        rate_down.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Down))
+        rate_down.triggered.connect(lambda: self.rate_slider.setValue(self.rate_slider.value() - 5))
+        self.addAction(rate_down)
+
     def on_panel_toggled(self, checked, widget, flag_attr):
         widget.setVisible(checked)
         setattr(self, flag_attr, checked)
+
+    def on_rate_changed(self, new_rate_hz):
+        self.rate_hz = new_rate_hz
+        self.chunk_frames = rate_hz_to_chunk_frames(self.sample_rate, new_rate_hz)
+        interval_ms = max(1, int(1000 * self.chunk_frames / self.sample_rate))
+        self.tick_interval_s = interval_ms / 1000.0
+        self.timer.setInterval(interval_ms)
+        self.rate_value_label.setText(f"{new_rate_hz} Hz")
 
     def closeEvent(self, event):
         # Stop the timer before the window starts tearing down. Otherwise a
