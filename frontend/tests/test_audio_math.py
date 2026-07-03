@@ -5,7 +5,13 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from audio_math import make_log_freq_grid, make_radial_angles, to_db_normalized, update_peak_hold
+from audio_math import (
+    make_log_freq_grid,
+    make_radial_angles,
+    polar_bar_endpoints,
+    to_db_normalized,
+    update_peak_hold,
+)
 
 
 def test_make_log_freq_grid_shape():
@@ -133,3 +139,41 @@ def test_make_radial_angles_sweeps_clockwise():
 def test_make_radial_angles_unit_circle():
     cos_angles, sin_angles = make_radial_angles(37)
     np.testing.assert_allclose(cos_angles**2 + sin_angles**2, 1.0, atol=1e-10)
+
+
+def test_polar_bar_endpoints_shape():
+    mags = np.array([0.1, 0.5, 0.9], dtype=np.float32)
+    cos_angles = np.array([1.0, 0.0, -1.0], dtype=np.float32)
+    sin_angles = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    x, y = polar_bar_endpoints(mags, cos_angles, sin_angles)
+    assert x.shape == (6,)
+    assert y.shape == (6,)
+
+
+def test_polar_bar_endpoints_zero_magnitude_matches_inner_radius():
+    mags = np.array([0.0, 0.0], dtype=np.float32)
+    cos_angles = np.array([1.0, 0.0], dtype=np.float32)
+    sin_angles = np.array([0.0, 1.0], dtype=np.float32)
+    x, y = polar_bar_endpoints(mags, cos_angles, sin_angles, inner_radius=0.3, bar_scale=1.0)
+    # Zero magnitude -> outer point coincides with inner point (spoke length 0).
+    np.testing.assert_allclose(x[0::2], x[1::2], atol=1e-6)
+    np.testing.assert_allclose(y[0::2], y[1::2], atol=1e-6)
+
+
+def test_polar_bar_endpoints_full_magnitude_reaches_inner_plus_scale():
+    mags = np.array([1.0, 1.0], dtype=np.float32)
+    cos_angles = np.array([1.0, 0.0], dtype=np.float32)
+    sin_angles = np.array([0.0, 1.0], dtype=np.float32)
+    x, y = polar_bar_endpoints(mags, cos_angles, sin_angles, inner_radius=0.3, bar_scale=1.0)
+    outer_radius = np.hypot(x[1::2], y[1::2])
+    np.testing.assert_allclose(outer_radius, 1.3, atol=1e-6)
+
+
+def test_polar_bar_endpoints_single_bin_exact_position():
+    mags = np.array([0.5], dtype=np.float32)
+    cos_angles = np.array([0.0], dtype=np.float32)  # bin at 12 o'clock (angle pi/2)
+    sin_angles = np.array([1.0], dtype=np.float32)
+    x, y = polar_bar_endpoints(mags, cos_angles, sin_angles, inner_radius=0.3, bar_scale=1.0)
+    # inner point at (0, 0.3), outer point at (0, 0.3 + 0.5) = (0, 0.8)
+    np.testing.assert_allclose(x, [0.0, 0.0], atol=1e-6)
+    np.testing.assert_allclose(y, [0.3, 0.8], atol=1e-6)

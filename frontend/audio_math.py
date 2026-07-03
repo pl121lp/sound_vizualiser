@@ -46,3 +46,22 @@ def update_peak_hold(
 def make_radial_angles(n_bins: int) -> tuple[np.ndarray, np.ndarray]:
     angles = np.pi / 2 - 2 * np.pi * np.arange(n_bins) / n_bins
     return np.cos(angles), np.sin(angles)
+
+
+def polar_bar_endpoints(
+    normalized_magnitudes: np.ndarray,
+    cos_angles: np.ndarray,
+    sin_angles: np.ndarray,
+    inner_radius: float = 0.3,
+    bar_scale: float = 1.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    normalized_magnitudes = np.asarray(normalized_magnitudes)
+    outer_radius = inner_radius + normalized_magnitudes * bar_scale
+    n = len(normalized_magnitudes)
+    x = np.empty(2 * n, dtype=np.float32)
+    y = np.empty(2 * n, dtype=np.float32)
+    x[0::2] = inner_radius * cos_angles
+    y[0::2] = inner_radius * sin_angles
+    x[1::2] = outer_radius * cos_angles
+    y[1::2] = outer_radius * sin_angles
+    return x, y
