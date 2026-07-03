@@ -4,3 +4,4 @@ soundfile
 pyqtgraph
 PyQt5
 pytest>=7.0
+sounddevice
