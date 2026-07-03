@@ -9,6 +9,7 @@ from audio_math import (
     make_log_freq_grid,
     make_radial_angles,
     polar_bar_endpoints,
+    rate_hz_to_chunk_frames,
     to_db_normalized,
     update_peak_hold,
 )
@@ -177,3 +178,15 @@ def test_polar_bar_endpoints_single_bin_exact_position():
     # inner point at (0, 0.3), outer point at (0, 0.3 + 0.5) = (0, 0.8)
     np.testing.assert_allclose(x, [0.0, 0.0], atol=1e-6)
     np.testing.assert_allclose(y, [0.3, 0.8], atol=1e-6)
+
+
+def test_rate_hz_to_chunk_frames_typical():
+    assert rate_hz_to_chunk_frames(44100.0, 30.0) == 1470
+
+
+def test_rate_hz_to_chunk_frames_low_rate_large_chunk():
+    assert rate_hz_to_chunk_frames(44100.0, 5.0) == 8820
+
+
+def test_rate_hz_to_chunk_frames_floors_at_one_frame():
+    assert rate_hz_to_chunk_frames(44100.0, 100000.0) == 1

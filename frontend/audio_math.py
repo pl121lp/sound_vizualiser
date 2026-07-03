@@ -65,3 +65,7 @@ def polar_bar_endpoints(
     x[1::2] = outer_radius * cos_angles
     y[1::2] = outer_radius * sin_angles
     return x, y
+
+
+def rate_hz_to_chunk_frames(sample_rate: float, rate_hz: float) -> int:
+    return max(1, round(sample_rate / rate_hz))
