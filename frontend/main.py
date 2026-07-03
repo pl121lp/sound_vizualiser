@@ -9,7 +9,13 @@ import pyqtgraph as pg
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "engine", "build"))
 import sound_viz_py
-from audio_math import make_log_freq_grid, to_db_normalized, update_peak_hold
+from audio_math import (
+    make_log_freq_grid,
+    make_radial_angles,
+    polar_bar_endpoints,
+    to_db_normalized,
+    update_peak_hold,
+)
 
 PEAK_HOLD_SECONDS = 1.0
 PEAK_DECAY_PER_SECOND = 1.0
@@ -52,6 +58,56 @@ class SpectrogramPanel(QtWidgets.QWidget):
         self._buffer = np.roll(self._buffer, -1, axis=0)
         self._buffer[-1] = col
         self._image.setImage(self._buffer)
+
+
+class RadialSpectrumPanel(QtWidgets.QWidget):
+    def __init__(self, spectrum_len: int, sample_rate: float, n_bins: int = 256):
+        super().__init__()
+
+        self._log_freqs, self._linear_freqs = make_log_freq_grid(
+            spectrum_len, sample_rate, n_bins
+        )
+        self._cos_angles, self._sin_angles = make_radial_angles(n_bins)
+        self._inner_radius = 0.3
+        self._bar_scale = 1.0
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._plot = pg.PlotWidget()
+        self._plot.setAspectLocked(True)
+        self._plot.hideAxis("left")
+        self._plot.hideAxis("bottom")
+        self._plot.setMouseEnabled(x=False, y=False)
+
+        self._spokes = pg.PlotCurveItem(pen=pg.mkPen("c", width=1), connect="pairs")
+        self._plot.addItem(self._spokes)
+
+        self._peak_dots = pg.ScatterPlotItem(pen=None, brush=pg.mkBrush("r"), size=3)
+        self._plot.addItem(self._peak_dots)
+
+        layout.addWidget(self._plot)
+        self.setMinimumHeight(150)
+
+    def update(self, spectrum: np.ndarray, peak_hold_spectrum: np.ndarray) -> None:
+        magnitude = to_db_normalized(
+            np.interp(self._log_freqs, self._linear_freqs, spectrum).astype(np.float32)
+        )
+        peak = to_db_normalized(
+            np.interp(
+                self._log_freqs, self._linear_freqs, peak_hold_spectrum
+            ).astype(np.float32)
+        )
+
+        x, y = polar_bar_endpoints(
+            magnitude, self._cos_angles, self._sin_angles, self._inner_radius, self._bar_scale
+        )
+        self._spokes.setData(x, y)
+
+        peak_x, peak_y = polar_bar_endpoints(
+            peak, self._cos_angles, self._sin_angles, self._inner_radius, self._bar_scale
+        )
+        self._peak_dots.setData(x=peak_x[1::2], y=peak_y[1::2])
 
 
 class BarMeter(QtWidgets.QWidget):
