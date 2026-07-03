@@ -448,7 +448,9 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.engine.push_samples(flat, self.n_channels)
 
         frame = self.engine.get_latest_features()
+        self._process_frame(frame)
 
+    def _process_frame(self, frame):
         if self.show_waveform:
             self.curve.setData(frame["waveform"])
 
