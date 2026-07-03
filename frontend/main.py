@@ -178,6 +178,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
         self.data = None
         self.sample_rate = None
+        self.file_sample_rate = None
         self.n_channels = 0
         self.read_pos = 0
         self.chunk_frames = 1
@@ -285,9 +286,21 @@ class WaveformWindow(QtWidgets.QMainWindow):
             return
 
         self.data = data
-        self.sample_rate = sample_rate
+        self.file_sample_rate = sample_rate
         self.n_channels = data.shape[1]
         self.read_pos = 0
+
+        self._configure_for_sample_rate(sample_rate)
+
+        self.has_file = True
+        self.file_path = path
+        self._update_path_label()
+        self._set_transport_enabled(True)
+        if not self.mic_enabled:
+            self.set_paused(False)
+
+    def _configure_for_sample_rate(self, sample_rate):
+        self.sample_rate = sample_rate
         self.chunk_frames = rate_hz_to_chunk_frames(sample_rate, self.rate_hz)
 
         self.engine = sound_viz_py.Engine(
@@ -312,16 +325,9 @@ class WaveformWindow(QtWidgets.QMainWindow):
             flag_attr="show_radial",
         )
 
-        self.has_file = True
-        self.file_path = path
-        self._update_path_label()
-        self._set_transport_enabled(True)
-
         interval_ms = max(1, int(1000 * self.chunk_frames / sample_rate))
         self.tick_interval_s = interval_ms / 1000.0
         self.timer.setInterval(interval_ms)
-        if not self.mic_enabled:
-            self.set_paused(False)
 
     def _replace_panel(self, attr_name, new_widget, stretch, flag_attr):
         old_widget = getattr(self, attr_name)
