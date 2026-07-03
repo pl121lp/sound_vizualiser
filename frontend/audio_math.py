@@ -69,3 +69,11 @@ def polar_bar_endpoints(
 
 def rate_hz_to_chunk_frames(sample_rate: float, rate_hz: float) -> int:
     return max(1, round(sample_rate / rate_hz))
+
+
+def advance_or_pause(read_pos: int, data_len: int, loop_enabled: bool) -> tuple[int, bool]:
+    if read_pos < data_len:
+        return read_pos, False
+    if loop_enabled:
+        return 0, False
+    return read_pos, True

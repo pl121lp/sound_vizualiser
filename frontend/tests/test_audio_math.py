@@ -6,6 +6,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from audio_math import (
+    advance_or_pause,
     make_log_freq_grid,
     make_radial_angles,
     polar_bar_endpoints,
@@ -194,3 +195,33 @@ def test_rate_hz_to_chunk_frames_floors_at_one_frame():
 
 def test_rate_hz_to_chunk_frames_rounds_non_integer_quotient():
     assert rate_hz_to_chunk_frames(44100.0, 8.0) == 5512
+
+
+def test_advance_or_pause_mid_playback_unchanged():
+    read_pos, should_pause = advance_or_pause(100, 1000, loop_enabled=False)
+    assert read_pos == 100
+    assert should_pause is False
+
+
+def test_advance_or_pause_eof_no_loop_pauses():
+    read_pos, should_pause = advance_or_pause(1000, 1000, loop_enabled=False)
+    assert read_pos == 1000
+    assert should_pause is True
+
+
+def test_advance_or_pause_past_eof_no_loop_pauses():
+    read_pos, should_pause = advance_or_pause(1200, 1000, loop_enabled=False)
+    assert read_pos == 1200
+    assert should_pause is True
+
+
+def test_advance_or_pause_eof_with_loop_wraps_to_zero():
+    read_pos, should_pause = advance_or_pause(1000, 1000, loop_enabled=True)
+    assert read_pos == 0
+    assert should_pause is False
+
+
+def test_advance_or_pause_mid_playback_with_loop_enabled_unchanged():
+    read_pos, should_pause = advance_or_pause(500, 1000, loop_enabled=True)
+    assert read_pos == 500
+    assert should_pause is False
