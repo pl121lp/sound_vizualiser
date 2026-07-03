@@ -226,12 +226,14 @@ class WaveformWindow(QtWidgets.QMainWindow):
             size=3,
         )
         self.spectrum_plot.addItem(self.peak_hold_dots)
+        self.radial_spectrum = RadialSpectrumPanel(self.spectrum_len, sample_rate)
 
         container = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(container)
         layout.addWidget(self.waveform_plot, stretch=1)
         layout.addWidget(self.spectrum_plot, stretch=1)
         layout.addWidget(self.spectrogram, stretch=2)
+        layout.addWidget(self.radial_spectrum, stretch=2)
 
         meters_layout = QtWidgets.QHBoxLayout()
         for meter in (
@@ -289,6 +291,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
             x=np.arange(self.spectrum_len),
             y=self.peak_hold_spectrum,
         )
+        self.radial_spectrum.update(spectrum, self.peak_hold_spectrum)
 
         self.rms_meter.update_value(float(frame["rms"]))
         self.zcr_meter.update_value(float(frame["zero_crossing_rate"]))
