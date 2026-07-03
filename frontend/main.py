@@ -13,6 +13,7 @@ from audio_math import (
     make_log_freq_grid,
     make_radial_angles,
     polar_bar_endpoints,
+    rate_hz_to_chunk_frames,
     to_db_normalized,
     update_peak_hold,
 )
@@ -177,7 +178,8 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
         self.window_size = args.window_size
         self.spectrum_len = self.window_size // 2 + 1
-        self.chunk_frames = max(1, round(sample_rate / args.update_rate))
+        self.rate_hz = args.update_rate
+        self.chunk_frames = rate_hz_to_chunk_frames(sample_rate, self.rate_hz)
 
         self.engine = sound_viz_py.Engine(
             window_size=self.window_size,
