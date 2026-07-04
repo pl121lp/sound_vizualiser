@@ -422,9 +422,6 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
     def on_mic_toggled(self, checked):
         if checked:
-            if self.playback_action.isChecked():
-                self.playback_action.setChecked(False)
-
             mic_source = MicInputSource()
             try:
                 mic_source.start()
@@ -438,6 +435,9 @@ class WaveformWindow(QtWidgets.QMainWindow):
                 self.mic_action.setChecked(False)
                 self.mic_action.blockSignals(False)
                 return
+
+            if self.playback_action.isChecked():
+                self.playback_action.setChecked(False)
 
             self.mic_source = mic_source
             self.mic_enabled = True
