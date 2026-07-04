@@ -282,6 +282,9 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self.load_file(wav_path)
 
     def load_file(self, path):
+        if self.playback_action.isChecked():
+            self.playback_action.setChecked(False)
+
         try:
             data, sample_rate = sf.read(path, dtype="float32", always_2d=True)
         except Exception as exc:
@@ -419,6 +422,9 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
     def on_mic_toggled(self, checked):
         if checked:
+            if self.playback_action.isChecked():
+                self.playback_action.setChecked(False)
+
             mic_source = MicInputSource()
             try:
                 mic_source.start()
@@ -479,9 +485,13 @@ class WaveformWindow(QtWidgets.QMainWindow):
 
     def on_loop_toggled(self, checked):
         self.loop_enabled = checked
+        if self.playback_source is not None:
+            self.playback_source.set_loop(checked)
 
     def on_restart(self):
         self.read_pos = 0
+        if self.playback_source is not None:
+            self.playback_source.seek(0)
 
     def on_pause_toggled(self, checked):
         self.set_paused(checked)
@@ -491,12 +501,17 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self.timer.stop()
         else:
             self.timer.start()
+        if self.playback_source is not None:
+            self.playback_source.set_paused(paused)
         if self.pause_action.isChecked() != paused:
             self.pause_action.blockSignals(True)
             self.pause_action.setChecked(paused)
             self.pause_action.blockSignals(False)
 
     def on_tick(self):
+        if self.playback_source is not None and self.playback_source.finished:
+            self.playback_action.setChecked(False)
+
         if self.mic_enabled:
             chunk = self.mic_source.read_available()
             if chunk is None:
@@ -654,6 +669,8 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.timer.stop()
         if self.mic_source is not None:
             self.mic_source.stop()
+        if self.playback_source is not None:
+            self.playback_source.stop()
         super().closeEvent(event)
 
 
