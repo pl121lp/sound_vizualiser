@@ -3,16 +3,3 @@
 - migrate all tests to catch2 
 - how to setup claude remote? can I use it to select yes/no for ongoing job?
 
-
-add another toolbar (always visible, best at top?) that shows the current input audio file path. 
-add a button to the toolbar to select input audio file, selection will restart the visualization.
-if user provided no audio input at launch of app, then start in pause mode and let user select audio file manually.
-to this toolbar add a toggle to select input from microphone instead of file audio (but do not yet implement this, just stub)
-in this toolbar also add a toggle for looping, if input is audio file
-in this toolbar also add a button to restart from beginning, if input is audio file
-in this toolbar also add a button to pause, if input is audio file
-
-
-add a button/mode to the toolbar to take input from microphone instead of file (phase 2e)
-
-playback
