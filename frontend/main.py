@@ -19,6 +19,7 @@ from audio_math import (
     update_peak_hold,
 )
 from mic_input import MicInputSource, MicUnavailableError
+from audio_playback import AudioPlaybackSource, AudioPlaybackUnavailableError
 
 PEAK_HOLD_SECONDS = 1.0
 PEAK_DECAY_PER_SECOND = 1.0
@@ -189,6 +190,8 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.mic_enabled = False
         self.mic_source = None
         self.engine = None
+        self.playback_enabled = False
+        self.playback_source = None
 
         self.waveform_plot = pg.PlotWidget()
         self.waveform_plot.setYRange(-1.0, 1.0)
@@ -376,6 +379,11 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.pause_action.toggled.connect(self.on_pause_toggled)
         toolbar.addAction(self.pause_action)
 
+        self.playback_action = QtWidgets.QAction("Play Audio", self)
+        self.playback_action.setCheckable(True)
+        self.playback_action.toggled.connect(self.on_playback_toggled)
+        toolbar.addAction(self.playback_action)
+
         self._update_path_label()
         self._set_transport_enabled(False)
 
@@ -392,6 +400,7 @@ class WaveformWindow(QtWidgets.QMainWindow):
         self.loop_action.setEnabled(file_controls_enabled)
         self.restart_action.setEnabled(file_controls_enabled)
         self.pause_action.setEnabled(file_controls_enabled)
+        self.playback_action.setEnabled(file_controls_enabled)
 
     def on_open_file(self):
         # Not QFileDialog.getOpenFileName()/.exec_(): on this Qt/Wayland stack a
@@ -441,6 +450,32 @@ class WaveformWindow(QtWidgets.QMainWindow):
             self.set_paused(True)
 
         self._update_path_label()
+
+    def on_playback_toggled(self, checked):
+        if checked:
+            source = AudioPlaybackSource(self.data, self.sample_rate)
+            try:
+                source.start(self.read_pos)
+            except AudioPlaybackUnavailableError as exc:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Audio playback unavailable",
+                    f"Could not start audio playback:\n{exc}",
+                )
+                self.playback_action.blockSignals(True)
+                self.playback_action.setChecked(False)
+                self.playback_action.blockSignals(False)
+                return
+
+            source.set_loop(self.loop_enabled)
+            source.set_paused(self.pause_action.isChecked())
+            self.playback_source = source
+            self.playback_enabled = True
+        else:
+            if self.playback_source is not None:
+                self.playback_source.stop()
+                self.playback_source = None
+            self.playback_enabled = False
 
     def on_loop_toggled(self, checked):
         self.loop_enabled = checked
